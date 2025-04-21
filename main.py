@@ -1,82 +1,186 @@
 import pandas as pd
 import time
+import numpy as np
+
+
 start = time.time()
 counter = 1
-def test(table):
+
+def one_element_update(row):
     global counter
+    GLOBAL_used.update([int(row[0])])
+    answer_df.loc[row[0], '[ОТВЕТ] Номер группы'] = counter
+    counter += 1
+    if row[-1] > 0:
+        return [row[-1], 0, 'index', row[0]]
+    else:
+        return [0, row[-1], 'index', row[0]]
 
-
-def dublicates(table):
+def all_elements_update(row, all_indexes):
     global counter
-    for i in range(len(table)):
-        active = table.iloc[i]['Кредит (актив)']
-        index_active = table.iloc[i]['Новый индекс']
-        if index_active not in GLOBAL_used:
-            for j in range(i+1, len(table)):
-                passive = table.iloc[j]['Вклад (пассив)']
-                index_passive = table.iloc[j]['Новый индекс']
-                if index_passive not in GLOBAL_used and active != 0:
-                    if active + passive == 0:
+    GLOBAL_used.update(all_indexes)
+    for i in all_indexes:
+        answer_df.loc[i, '[ОТВЕТ] Номер группы'] = counter
+    counter += 1
+    return
 
-                        GLOBAL_used.append(index_passive)
-                        GLOBAL_used.append(index_active)
-                        data.at[index_passive, '[ОТВЕТ] Номер группы'] = counter
-                        data.at[index_active, '[ОТВЕТ] Номер группы'] = counter
-                        counter += 1
-
-                    break
-
-    return table
+def some_elements_update(all_indexes, cur_not_used_index):
+    global counter
+    indexes = list(set(all_indexes) - set(cur_not_used_index))
+    GLOBAL_used.update(indexes)
+    for i in indexes:
+        answer_df.loc[i, '[ОТВЕТ] Номер группы'] = counter
+    counter += 1
+    return
 
 
-def main(data, days, rate, i):
+def test(table, row):
+    global counter
+    if len(table) != 0:
+        table.sort_values(by=['Сумма'], ascending=[True], inplace=True)  # сортировка
+
+        local_sum = table['Сумма'].sum() + row[-1]
+        all_indexes = table['Новый индекс'].tolist() + [row[0]]
+
+        active_sum =  table[table['Сумма'] > 0]['Сумма'].sum()
+        passive_sum = abs(table[table['Сумма'] < 0]['Сумма'].sum())
+        if row[-1] > 0:
+            active_sum += row[-1]
+        else:
+            passive_sum += abs(row[-1])
+
+        if local_sum == 0:
+            all_elements_update(row, all_indexes)
+            return 0
+        if passive_sum != 0:
+            if 5/7 <= active_sum/passive_sum <= 7/5 :
+                all_elements_update(row, all_indexes)
+                return abs(active_sum - passive_sum)
+        else:
+            return one_element_update(row)
+
+        cur_not_used_index = []
+        new_active_sum = active_sum
+        new_passive_sum = passive_sum
+        if local_sum < 0:
+            for i in range(len(table)):
+                s = table.iloc[i, 3]
+                s_index = table.iloc[i, 0]
+                if s < 0:
+                    if abs(local_sum - s) <= abs(local_sum):
+                        local_sum -= s
+                        new_passive_sum += s
+                        cur_not_used_index.append(s_index)
+                        continue
+                else:
+                    if local_sum > 0:
+                        break
+                    else:
+                        if abs(local_sum + s) <= abs(local_sum):
+                            local_sum += s
+                            new_active_sum -= s
+                            cur_not_used_index.append(s_index)
+                            continue
+            if new_passive_sum != 0:
+                if 5 / 7 <= ((new_active_sum) / (new_passive_sum)) <= 7 / 5:
+                    some_elements_update(all_indexes, cur_not_used_index)
+                    return abs(new_active_sum - new_passive_sum)
+                else:
+                    return one_element_update(row)
+            else:
+                return one_element_update(row)
+        else:
+            for i in range(len(table)-1, -1, -1):
+                s = table.iloc[i, 3]
+                s_index = table.iloc[i, 0]
+                if s > 0:
+                    if abs(local_sum - s) <= abs(local_sum):
+                        local_sum -= s
+                        new_active_sum -= s
+                        cur_not_used_index.append(s_index)
+                        continue
+                else:
+                    if local_sum < 0:
+                        break
+                    else:
+                        if abs(local_sum + s) <= abs(local_sum):
+                            local_sum += s
+                            new_passive_sum += s
+                            cur_not_used_index.append(s_index)
+                            continue
+            if new_passive_sum != 0:
+                if 5 / 7 <= ((new_active_sum) / (new_passive_sum)) <= 7 / 5:
+                    some_elements_update(all_indexes, cur_not_used_index)
+                    return abs(new_active_sum - new_passive_sum)
+                else:
+                    return one_element_update(row)
+            else:
+                return one_element_update(row)
+    return one_element_update(row)
+
+def main(df, date, rate, i):
     extra_table = []
-    for j in range(i + 1, len(data)):
-        cur_index = data.index[j]
-        cur_active, cur_passive, cur_date, cur_days, cur_rate, cur_ans, cur_x = data.iloc[j]
+    for j in range(i + 1, len(df)):
+        cur_index = df.index[j]
+        cur_date, cur_rate, cur_summa = df.iloc[j]
         if cur_rate - rate > 0.15:
             break
-        if abs(cur_days - days) > 30 or cur_index in GLOBAL_used:
+        if abs(cur_date - date) > 30 or cur_index in GLOBAL_used:
             continue
-        extra_table.append([cur_index, cur_active, -cur_passive, cur_date, cur_days, cur_rate, cur_ans, cur_x])
-    extra_table = [row] + extra_table
-    table = pd.DataFrame(extra_table, columns=['Новый индекс'] + list(data.columns))
+        extra_table.append([cur_index, cur_date, cur_rate, cur_summa])
+    extra_table = extra_table
+    table = pd.DataFrame(extra_table, columns=['Новый индекс'] + list(df.columns))
     return table
 
 
 data = pd.read_csv('Банк_3мес_данные.csv', sep=';', encoding='cp1251')
 data['Вклад (пассив)'] = data['Вклад (пассив)'].str.replace(',', '.', regex=False).astype(float)
+data['Вклад (пассив)'] = -data['Вклад (пассив)']
 data['Дата погашения'] = pd.to_datetime(data['Дата погашения'], format='%d.%m.%Y')
 
 
-k = 1
-data.sort_values(by=['Ставка, %', 'Дата погашения'], ascending=[True, True], inplace=True) #сортировка
 
+answer_df = data.copy()
+data.sort_values(by=['Ставка, %', 'Дата погашения'], ascending=[True, True], inplace=True) #сортировка
+df = data[['Срок погашения, дней', 'Ставка, %']].copy()
+df['Сумма'] = data['Вклад (пассив)'] + data['Кредит (актив)']
+
+
+GLOBAL_used = set()
 
 left_active = 0
 left_passive = 0
-GLOBAL_used = []
 RWA = 0
+for i in range(len(df)):
+    index = df.index[i]
+    if index in GLOBAL_used:
+#        print('skip')
+        continue
+    date, rate, summa  = df.iloc[i]
+    row = [index, date, rate, summa]
+    table = main(df, date, rate, i)
 
-for i in range(20):
-    index = data.index[i]
-    active, passive, date, days, rate, ans, x  = data.iloc[i]
-    passive = -passive
-    row = [index, active, passive, date, days, rate, ans, x]
-    table = main(data, days, rate, i)
+    result = test(table, row)
+    if isinstance(result, np.float64) or type(result) == int:
+        RWA += result
+    else:
+        left_active += result[0]
+        left_passive -= result[1]
 
 
 
-print(GLOBAL_used)
-#RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.4
+#print(GLOBAL_used)
+RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.4
+print(RWA)
+
 
 end = time.time()
 
 print(f"Время выполнения: {end - start:.4f} секунд")
 
-print(data['[ОТВЕТ] Номер группы'].head(20))
+#print(data['[ОТВЕТ] Номер группы'].head(20))
 
 
 
 
-data.to_csv('имя_файла2.csv', index=True, encoding='cp1251')
+#answer_df.to_csv('ОТВЕТ.csv', index=True, encoding='cp1251')
