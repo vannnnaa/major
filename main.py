@@ -52,12 +52,7 @@ def test(table, row):
         if local_sum == 0:
             all_elements_update(row, all_indexes)
             return 0
-        if passive_sum != 0:
-            if 5/7 <= active_sum/passive_sum <= 7/5 :
-                all_elements_update(row, all_indexes)
-                return abs(active_sum - passive_sum)
-        else:
-            return one_element_update(row)
+
 
         cur_not_used_index = []
         new_active_sum = active_sum
@@ -135,12 +130,13 @@ def main(df, date, rate, i):
 
 data = pd.read_csv('Банк_3мес_данные.csv', sep=';', encoding='cp1251')
 data['Вклад (пассив)'] = data['Вклад (пассив)'].str.replace(',', '.', regex=False).astype(float)
-data['Вклад (пассив)'] = -data['Вклад (пассив)']
 data['Дата погашения'] = pd.to_datetime(data['Дата погашения'], format='%d.%m.%Y')
-
-
-
 answer_df = data.copy()
+data['Вклад (пассив)'] = -data['Вклад (пассив)']
+
+
+
+
 data.sort_values(by=['Ставка, %', 'Дата погашения'], ascending=[True, True], inplace=True) #сортировка
 df = data[['Срок погашения, дней', 'Ставка, %']].copy()
 df['Сумма'] = data['Вклад (пассив)'] + data['Кредит (актив)']
@@ -170,12 +166,15 @@ for i in range(len(df)):
 
 
 #print(GLOBAL_used)
+#print('RWA:', RWA)
 RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.4
-print(RWA)
+print('Answer RWA:', RWA)
 
 
 end = time.time()
 
+
+#print(answer_df['Кредит (актив)'].sum()+answer_df['Вклад (пассив)'].sum())
 print(f"Время выполнения: {end - start:.4f} секунд")
 
 #print(data['[ОТВЕТ] Номер группы'].head(20))
@@ -183,4 +182,5 @@ print(f"Время выполнения: {end - start:.4f} секунд")
 
 
 
-#answer_df.to_csv('ОТВЕТ.csv', index=True, encoding='cp1251')
+#answer_df.to_csv('ОТВЕТ.csv', index=False, encoding='cp1251')
+#print(answer_df[answer_df['[ОТВЕТ] Номер группы'] == 10.0]['Кредит (актив)'].sum()-answer_df[answer_df['[ОТВЕТ] Номер группы'] == 10.0]['Вклад (пассив)'].sum())
