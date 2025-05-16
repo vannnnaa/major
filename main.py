@@ -6,6 +6,7 @@ import numpy as np
 start = time.time()
 counter = 1
 
+
 def one_element_update(row):
     global counter
     GLOBAL_used.update([int(row[0])])
@@ -16,6 +17,7 @@ def one_element_update(row):
     else:
         return [0, row[-1], 'index', row[0]]
 
+
 def all_elements_update(row, all_indexes):
     global counter
     GLOBAL_used.update(all_indexes)
@@ -23,6 +25,7 @@ def all_elements_update(row, all_indexes):
         answer_df.loc[i, '[ОТВЕТ] Номер группы'] = counter
     counter += 1
     return
+
 
 def some_elements_update(all_indexes, cur_not_used_index):
     global counter
@@ -35,14 +38,14 @@ def some_elements_update(all_indexes, cur_not_used_index):
 
 
 def test(table, row):
-    global counter
     if len(table) != 0:
-        table.sort_values(by=['Сумма'], ascending=[True], inplace=True)  # сортировка
+        table.sort_values(by=['Сумма'],
+                          ascending=[True],
+                          inplace=True)  # сортировка
 
         local_sum = table['Сумма'].sum() + row[-1]
         all_indexes = table['Новый индекс'].tolist() + [row[0]]
-
-        active_sum =  table[table['Сумма'] > 0]['Сумма'].sum()
+        active_sum = table[table['Сумма'] > 0]['Сумма'].sum()
         passive_sum = abs(table[table['Сумма'] < 0]['Сумма'].sum())
         if row[-1] > 0:
             active_sum += row[-1]
@@ -52,8 +55,6 @@ def test(table, row):
         if local_sum == 0:
             all_elements_update(row, all_indexes)
             return 0
-
-
         cur_not_used_index = []
         new_active_sum = active_sum
         new_passive_sum = passive_sum
@@ -80,10 +81,6 @@ def test(table, row):
                 if 5 / 7 <= ((new_active_sum) / (new_passive_sum)) <= 7 / 5:
                     some_elements_update(all_indexes, cur_not_used_index)
                     return abs(new_active_sum - new_passive_sum)
-                else:
-                    return one_element_update(row)
-            else:
-                return one_element_update(row)
         else:
             for i in range(len(table)-1, -1, -1):
                 s = table.iloc[i, 3]
@@ -107,11 +104,8 @@ def test(table, row):
                 if 5 / 7 <= ((new_active_sum) / (new_passive_sum)) <= 7 / 5:
                     some_elements_update(all_indexes, cur_not_used_index)
                     return abs(new_active_sum - new_passive_sum)
-                else:
-                    return one_element_update(row)
-            else:
-                return one_element_update(row)
     return one_element_update(row)
+
 
 def main(df, date, rate, i):
     extra_table = []
@@ -124,23 +118,25 @@ def main(df, date, rate, i):
             continue
         extra_table.append([cur_index, cur_date, cur_rate, cur_summa])
     extra_table = extra_table
-    table = pd.DataFrame(extra_table, columns=['Новый индекс'] + list(df.columns))
+    table = pd.DataFrame(extra_table,
+                         columns=['Новый индекс'] + list(df.columns))
     return table
 
 
-data = pd.read_csv('Банк_3мес_данные.csv', sep=';', encoding='cp1251')
+data = pd.read_csv('Банк_3мес_данные.csv',
+                   sep=';',
+                   encoding='cp1251')
 data['Вклад (пассив)'] = data['Вклад (пассив)'].str.replace(',', '.', regex=False).astype(float)
-data['Дата погашения'] = pd.to_datetime(data['Дата погашения'], format='%d.%m.%Y')
+data['Дата погашения'] = pd.to_datetime(data['Дата погашения'],
+                                        format='%d.%m.%Y')
 answer_df = data.copy()
 data['Вклад (пассив)'] = -data['Вклад (пассив)']
 
 
-
-
-data.sort_values(by=['Ставка, %', 'Дата погашения'], ascending=[True, True], inplace=True) #сортировка
+data.sort_values(by=['Ставка, %', 'Дата погашения'],
+                 ascending=[True, True], inplace=True)
 df = data[['Срок погашения, дней', 'Ставка, %']].copy()
 df['Сумма'] = data['Вклад (пассив)'] + data['Кредит (актив)']
-
 
 GLOBAL_used = set()
 
@@ -150,9 +146,8 @@ RWA = 0
 for i in range(len(df)):
     index = df.index[i]
     if index in GLOBAL_used:
-#        print('skip')
         continue
-    date, rate, summa  = df.iloc[i]
+    date, rate, summa = df.iloc[i]
     row = [index, date, rate, summa]
     table = main(df, date, rate, i)
 
@@ -163,24 +158,11 @@ for i in range(len(df)):
         left_active += result[0]
         left_passive -= result[1]
 
-
-
-#print(GLOBAL_used)
-#print('RWA:', RWA)
 RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.4
 print('Answer RWA:', RWA)
-
-
+print(answer_df['Кредит (актив)'].sum() - answer_df['Вклад (пассив)'].sum())
 end = time.time()
-
-
-#print(answer_df['Кредит (актив)'].sum()+answer_df['Вклад (пассив)'].sum())
+print("Количество групп неттирования:", counter - 1)
 print(f"Время выполнения: {end - start:.4f} секунд")
 
-#print(data['[ОТВЕТ] Номер группы'].head(20))
-
-
-
-
-#answer_df.to_csv('ОТВЕТ.csv', index=False, encoding='cp1251')
-#print(answer_df[answer_df['[ОТВЕТ] Номер группы'] == 10.0]['Кредит (актив)'].sum()-answer_df[answer_df['[ОТВЕТ] Номер группы'] == 10.0]['Вклад (пассив)'].sum())
+# answer_df.to_csv('ОТВЕТ.csv', index=False, encoding='cp1251')
