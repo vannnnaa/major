@@ -4,14 +4,13 @@ import numpy as np
 
 
 start = time.time()
-counter = 1
-
+counter = 2
+new_counter = 1
 
 def one_element_update(row):
-    global counter
+    global new_counter
     GLOBAL_used.update([int(row[0])])
-    answer_df.loc[row[0], '[ОТВЕТ] Номер группы'] = counter
-    counter += 1
+    answer_df.loc[row[0], '[ОТВЕТ] Номер группы'] = new_counter
     if row[-1] > 0:
         return [row[-1], 0, 'index', row[0]]
     else:
@@ -162,7 +161,7 @@ RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.
 print('Answer RWA:', RWA)
 print(answer_df['Кредит (актив)'].sum() - answer_df['Вклад (пассив)'].sum())
 end = time.time()
-print("Количество групп неттирования:", counter - 1)
+print("Количество групп неттирования:", counter)
 print(f"Время выполнения: {end - start:.4f} секунд")
 
 # answer_df.to_csv('ОТВЕТ.csv', index=False, encoding='cp1251')
