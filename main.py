@@ -159,7 +159,7 @@ for i in range(len(df)):
 
 RWA += (left_active + left_passive) * 0.1 + abs(left_active - left_passive) * 0.4
 print('Answer RWA:', RWA)
-print(answer_df['Кредит (актив)'].sum() - answer_df['Вклад (пассив)'].sum())
+# print(answer_df['Кредит (актив)'].sum() - answer_df['Вклад (пассив)'].sum())
 end = time.time()
 print("Количество групп неттирования:", counter)
 print(f"Время выполнения: {end - start:.4f} секунд")
